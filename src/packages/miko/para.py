@@ -69,6 +69,8 @@ class Connector(Validator):
                 stdout_data.append(session.recv(nbytes))
             if session.recv_stderr_ready():
                 stderr_data.append(session.recv_stderr(nbytes))
+        del self._session
+        self._session = None
         return ("", stdout_data, stderr_data)
 
 
