@@ -1,4 +1,4 @@
-# netrc.py  (c)2021  Henrique Moreira
+# netrc.py  (c)2021, 2022  Henrique Moreira
 #
 # Reader of ~/.netrc file
 
@@ -19,7 +19,7 @@ each host entry has a 'list' dictionary, a 'login' string, and a 'pass' string.
     code = nrc.plain()
     assert code == 1, f"Invalid nrc.plain(): {code}"
     print("nrc:", nrc.machines())
-    key = input("Enter host or IP: ...")
+    key = input("Enter host or IP for seeing it's credentials: ...")
     if len(key) >= 1:
         print(f"Credentials for host '{key}':", nrc.credential(key))
 
@@ -53,12 +53,9 @@ class NetRC(Reader):
     _mach = None
 
     def __init__(self, fname=None):
-        self._data, self._seqs, self._mach = "", list(), dict()
-        if fname == "":
-            return;
-        suffix = ".netrc" if os.name != "nt" else "_netrc"
-        path = fname if fname else os.path.join(Reader.home_path(), suffix)
-        self._data = open(path, "r").read()
+        self._data, self._seqs, self._mach = "", [], {}
+        if fname != "":
+            self._fetch(fname)
 
     def sequence(self) -> list:
         assert self._seqs is not None
@@ -80,6 +77,14 @@ class NetRC(Reader):
         code = self._parse(self._data)
         return code == 0
 
+    def _fetch(self, fname) -> str:
+        """ Read data """
+        suffix = ".netrc" if os.name != "nt" else "_netrc"
+        path = fname if fname else os.path.join(Reader.home_path(), suffix)
+        with open(path, "r", encoding="ascii") as fdin:
+            self._data = fdin.read()
+        return path
+
     def _parse(self, data:str) -> int:
         # Throw away comments
         lines = [astr for astr in data.splitlines() if Reader.relevant(astr)]
@@ -92,13 +97,13 @@ class NetRC(Reader):
         }
         return 0
 
-    def _parse_machines(self, seqs:list) -> dict():
+    def _parse_machines(self, seqs:list) -> dict:
 
         def flush_this(alist:list, result:dict):
             if not alist:
                 return False
             # New-line, or tab, or space...
-            spl = re.split("\n|\t|\s", '\n'.join(alist))
+            spl = re.split(r"\n|\t|\s", '\n'.join(alist))
             mach, rest = spl[0], spl[1:]
             login, password = "", ""
             idx = 0
@@ -108,14 +113,15 @@ class NetRC(Reader):
                 elif item == "password":
                     password = rest[idx+1]
                 idx += 1
-            result[mach] = dict()
-            result[mach]['list'] = [item for item in rest if item]
-            result[mach]['login'], result[mach]['pass'] = login, password
+            result[mach] = {
+                'list': [item for item in rest if item],
+                'login': login,
+                'pass': password,
+            }
             alist.clear()
             return True
 
-        adict = dict()
-        last = list()
+        last, adict = [], {}
         for item in seqs:
             if not item:
                 continue
@@ -123,6 +129,7 @@ class NetRC(Reader):
                 flush_this(last, adict)
             else:
                 last.append(item)
+        flush_this(last, adict)
         return ("", adict)
 
 # Main script

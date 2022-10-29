@@ -15,6 +15,12 @@ IO_BUFFER_SIZE = 4096
 
 class Validator():
     """ Basic validation methods. """
+    def __init__(self, name):
+        self._name = name
+
+    def get_name(self) -> str:
+        return self._name
+
     @staticmethod
     def validate_host(host, port) -> bool:
         is_ok = isinstance(host, str) and host
@@ -35,6 +41,7 @@ class Connector(Validator):
             a_host = host
         else:
             assert False, f"Invalid host: {host}"
+        super().__init__(a_host)
         assert Validator.validate_host(a_host, a_port)
         client = paramiko.Transport((a_host, a_port))
         assert client
@@ -59,10 +66,10 @@ class Connector(Validator):
         """ Returns a triple: msg, stdout_data, stderr_data
         """
         nbytes = IO_BUFFER_SIZE
-        stdout_data, stderr_data = list(), list()
+        stdout_data, stderr_data = [], []
         session = self._session
         if not session:
-            return ("No session", list(), list())
+            return ("No session", [], [])
         session.exec_command(command)
         while not session.exit_status_ready():
             if session.recv_ready():
@@ -79,4 +86,5 @@ if __name__ == "__main__":
     print("Please import me!")
     # Short examples follow:
     #
-    # abc = Connector("pena"); abc.connect("guest", mypass); abc.new_session(); abc.dribble("ls -la /")
+    # abc = Connector("pena")
+    # abc.connect("guest", mypass); abc.new_session(); abc.dribble("ls -la /")
