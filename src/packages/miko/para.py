@@ -58,6 +58,16 @@ class Connector(Validator):
     def connect(self, username:str, password:str):
         self._client.connect(username=username, password=password)
 
+    def connect_user(self, cred):
+        if isinstance(cred, tuple):
+            username, password = cred
+        elif isinstance(cred, str):
+            username = cred
+            password = input("Enter password ... ")
+        else:
+            assert False, "connect_user()"
+        return self.connect(username, password)
+
     def new_session(self) -> bool:
         self._session = self._client.open_channel(kind='session')
         return True
