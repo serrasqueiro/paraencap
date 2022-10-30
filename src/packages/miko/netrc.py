@@ -51,11 +51,19 @@ class NetRC(Reader):
     _data = ""
     _seqs = None
     _mach = None
+    _msg = ""
 
     def __init__(self, fname=None):
         self._data, self._seqs, self._mach = "", [], {}
         if fname != "":
             self._fetch(fname)
+
+    def all_ok(self) -> bool:
+        is_ok = self._mach is not None
+        return is_ok and self._msg == ""
+
+    def message(self) -> str:
+        return self._msg
 
     def sequence(self) -> list:
         assert self._seqs is not None
@@ -79,10 +87,15 @@ class NetRC(Reader):
 
     def _fetch(self, fname) -> str:
         """ Read data """
+        self._data, self._msg = "", ""
         suffix = ".netrc" if os.name != "nt" else "_netrc"
         path = fname if fname else os.path.join(Reader.home_path(), suffix)
-        with open(path, "r", encoding="ascii") as fdin:
-            self._data = fdin.read()
+        try:
+            with open(path, "r", encoding="ascii") as fdin:
+                self._data = fdin.read()
+        except FileNotFoundError:
+            self._msg = f"Not found: {path}"
+            return ""
         return path
 
     def _parse(self, data:str) -> int:
